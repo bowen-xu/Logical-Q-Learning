@@ -112,7 +112,6 @@ def main():
         if (episode) % 500 == 0:
             tqdm.write(f"[{episode + 1}/{num_episodes}] Reward: {total_reward:.1f}")
         rewards.append(total_reward)
-    
 
     # Show final learned policy
     print("=== Learned Policy ===")
@@ -138,11 +137,11 @@ def main():
 
     print("\nTest complete!")
     plt.plot(rewards)
-    plt.xlabel('Episode')
-    plt.ylabel('Total Reward')
-    plt.title('Total Reward per Episode')
-    plt.savefig('rewards_plot.png')
-    
+    plt.xlabel("Episode")
+    plt.ylabel("Total Reward")
+    plt.title("Total Reward per Episode")
+    plt.savefig("rewards_plot.png")
+
 
 if __name__ == "__main__":
     main()

@@ -21,50 +21,9 @@ from .environment_nal import State
 from weakref import WeakSet, WeakValueDictionary
 
 
-from .nal import DesireV, TruthV
+from .nal import DesireV, TruthV, Desire_deduction
 
-
-class Concept:
-    def __init__(self, value):
-        self.value = value
-        self.desirev: DesireV = DesireV(0.5, 0.0)
-        self.truthv: TruthV = TruthV(0.5, 0.0)
-
-    def __eq__(self, other):
-        if not isinstance(other, Concept):
-            return False
-        return self.value == other.value
-
-    def __hash__(self):
-        return hash(self.value)
-
-    def __repr__(self):
-        return f"{self.value}"
-
-
-class Sequence:
-    def __init__(self, *args: Concept):
-        self.components = tuple(args)
-        self.desirev: DesireV = DesireV(0.5, 0.0)
-        self.truthv: TruthV = TruthV(0.5, 0.0)
-
-    def __len__(self):
-        return len(self.components)
-
-    def __hash__(self):
-        return hash(self.components)
-
-    def __eq__(self, other):
-        if not isinstance(other, Sequence):
-            return False
-        if hash(self) != hash(other):
-            return False
-        return self.components == other.components
-
-    def __repr__(self):
-        return (
-            f"(&/, {', '.join(str(c.value) for c in self.components)}) {self.desirev}!"
-        )
+from .concepts import Concept, Schema, Sequence
 
 
 class AgentNAL:
@@ -83,6 +42,7 @@ class AgentNAL:
         self.epsilon = epsilon
         self.epsilon_min = epsilon_min
         self.epsilon_decay = epsilon_decay
+        self.schemas: dict[int, Schema] = dict()
         self.sequences: dict[int, Sequence] = dict()
         self.sequence_table: dict[State, list[Sequence]] = {}
         self.goal = Concept("G")
@@ -108,8 +68,13 @@ class AgentNAL:
             return  # invalid move, do not update
 
         seq = self._add_sequence(Sequence(Concept(state), Concept(action)))
+        schema = self._add_schema(Schema(seq, Concept(next_state)))
+        # schema
+        schema.truth.revise(1.0, 0.5)  # w+ = w = 1.0
 
         if reward > 0:
+            schema_g = self._add_schema(Schema(Concept(next_state), self.goal))
+            schema_g.truth.revise(1.0, 0.5)  # w+ = w = 1.0
             seq.desirev.choose(DesireV(1.0, 0.99))  # w+ = w = 99
 
         # update seq.desirev
@@ -120,10 +85,18 @@ class AgentNAL:
             default=DesireV(0.5, 0.0),
         )
         max_desire = DesireV(max_desire.f, max_desire.c * 0.95)
-        seq.desirev.choose(max_desire)
+        desirev = Desire_deduction(schema.truth, max_desire)
+        seq.desirev.choose(desirev)
 
     def decay_epsilon(self):
         self.epsilon = max(self.epsilon_min, self.epsilon * self.epsilon_decay)
+
+    def _add_schema(self, schema: Schema):
+        if hash(schema) not in self.schemas:
+            self.schemas[hash(schema)] = schema
+            return schema
+        else:
+            return self.schemas[hash(schema)]
 
     def _add_sequence(self, sequence: Sequence):
         if hash(sequence) not in self.sequences:
