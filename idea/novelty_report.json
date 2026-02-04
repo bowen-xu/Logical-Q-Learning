@@ -1,0 +1,109 @@
+{
+  "run_id": "run_20260203_215157_84866_745c03",
+  "created_at": "2026-02-03T22:08:08.385941+00:00",
+  "user_idea": "A new method Logical Q Learning, that designs a new algorithm using non-axiomatic logic but can do reinforcement learning similar to Q learning.",
+  "embedding_available": true,
+  "embedding_model": "Qwen/Qwen3-Embedding-8B",
+  "top_k": 100,
+  "thresholds": {
+    "high": 0.88,
+    "medium": 0.82
+  },
+  "risk_level": "low",
+  "max_similarity": 0.5538644790649414,
+  "candidates": [
+    {
+      "paper_id": "hF1WEiIYPNb",
+      "title": "Query The Agent: Improving Sample Efficiency Through Epistemic Uncertainty Estimation",
+      "pattern_id": "pattern_123",
+      "domain": "Machine Learning",
+      "text_hash": "d1c4ca68ce742d9edc098911350e7f941fada5557ffbab5e8c9b9177df71ab98",
+      "cosine": 0.5538644790649414,
+      "keyword_overlap": 0.09034267912772585
+    },
+    {
+      "paper_id": "SJ0Lde3tRL",
+      "title": "Extreme Q-Learning: MaxEnt RL without Entropy",
+      "pattern_id": "",
+      "domain": "Machine Learning",
+      "text_hash": "ec068baf76278eccf5952f759990b431815af114e57d996f6776d08f1b612694",
+      "cosine": 0.5530486106872559,
+      "keyword_overlap": 0.0790273556231003
+    },
+    {
+      "paper_id": "x70_D-KGEMx",
+      "title": "A sampling framework for value-based reinforcement learning",
+      "pattern_id": "pattern_123",
+      "domain": "Machine Learning",
+      "text_hash": "66466e68add19e1406acf13a44bd8c5dc1b85f0130e44616957de6e83a89fde6",
+      "cosine": 0.5470829010009766,
+      "keyword_overlap": 0.0880503144654088
+    },
+    {
+      "paper_id": "t02FF6Fj5mH",
+      "title": "Best Possible Q-Learning",
+      "pattern_id": "pattern_98",
+      "domain": "Machine Learning",
+      "text_hash": "1c870db95622079e42507230744ff4f78b7da0fb6c0f16751cd481135c787d73",
+      "cosine": 0.5447972416877747,
+      "keyword_overlap": 0.10091743119266056
+    },
+    {
+      "paper_id": "Ian00SaFHg",
+      "title": "Efficient Model-Based Reinforcement Learning Through Optimistic Thompson Sampling",
+      "pattern_id": "",
+      "domain": "Machine Learning",
+      "text_hash": "294ba2adead841e57b7fbe93a34bc735df63c4c2ab8b065d46cd21dafbb5acf5",
+      "cosine": 0.5384995937347412,
+      "keyword_overlap": 0.07763975155279502
+    },
+    {
+      "paper_id": "FvQsk3la17",
+      "title": "Langevin Soft Actor-Critic: Efficient Exploration through Uncertainty-Driven Critic Learning",
+      "pattern_id": "pattern_123",
+      "domain": "Machine Learning",
+      "text_hash": "768e72ef99f59336978af95d9e3d5709654bb9451cc77b83f1e09175498cb351",
+      "cosine": 0.5326040983200073,
+      "keyword_overlap": 0.07407407407407407
+    },
+    {
+      "paper_id": "Zeb5mTuqT5",
+      "title": "Confidence-Conditioned Value Functions for Offline Reinforcement Learning",
+      "pattern_id": "pattern_104",
+      "domain": "Machine Learning",
+      "text_hash": "f348df03f739c2b78d7c0bf8c6cc1b09cf7e77f4affad2845396bb6476d3c6dd",
+      "cosine": 0.5320315957069397,
+      "keyword_overlap": 0.0950920245398773
+    },
+    {
+      "paper_id": "o_HqtIc-oF",
+      "title": "ACQL: An Adaptive Conservative Q-Learning Framework for Offline Reinforcement Learning",
+      "pattern_id": "pattern_104",
+      "domain": "Machine Learning",
+      "text_hash": "62bfd01696d6949b9826feb6790c768782a72d9f6933f7cab0a825672a40c92e",
+      "cosine": 0.5242714881896973,
+      "keyword_overlap": 0.08083832335329341
+    },
+    {
+      "paper_id": "l6QnSQizmN",
+      "title": "Online Reinforcement Learning in Non-Stationary Context-Driven Environments",
+      "pattern_id": "pattern_0",
+      "domain": "Machine Learning",
+      "text_hash": "22044549c2b41660e3eab8b791ca722cd52fd10365fbeb195e365913914c83df",
+      "cosine": 0.5230311155319214,
+      "keyword_overlap": 0.09841269841269841
+    },
+    {
+      "paper_id": "aySB6rDo0z",
+      "title": "Effective Offline Reinforcement Learning via Conservative State Value Estimation",
+      "pattern_id": "pattern_104",
+      "domain": "Machine Learning",
+      "text_hash": "2ca53ab23c424d4d383e5367322e47a62987a410ae73270adaaab859a653a749",
+      "cosine": 0.5220890045166016,
+      "keyword_overlap": 0.0950920245398773
+    }
+  ],
+  "notes": [
+    "index_reused"
+  ]
+}
