@@ -11,7 +11,7 @@ from collections import deque
 type State = tuple[int, int]
 
 
-class EnvironmentNal:
+class GridWorld:
     def __init__(
         self,
         grid_size: int = 3,
@@ -158,7 +158,7 @@ class EnvironmentNal:
 
 if __name__ == "__main__":
     # Simple test
-    env = EnvironmentNal(
+    env = GridWorld(
         grid_size=3,
         obstacle_probability=0.2,
         step_reward=-1.0,

@@ -17,7 +17,7 @@ Classes:
 import random
 import numpy as np
 
-from .environment_nal import State
+from .grid_world import State
 from weakref import WeakSet, WeakValueDictionary
 
 
