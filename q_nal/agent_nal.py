@@ -24,9 +24,10 @@ from weakref import WeakSet, WeakValueDictionary
 from .nal import DesireV, TruthV, Desire_deduction
 
 from .concepts import Concept, Schema, Sequence
+from .agent import Agent
 
 
-class AgentNAL:
+class AgentNAL(Agent):
     def __init__(
         self,
         actions: list[int],

@@ -18,9 +18,10 @@ import random
 import numpy as np
 
 from .grid_world import State
+from .agent import Agent
 
 
-class AgentQ:
+class AgentQ(Agent):
 
     def __init__(
         self,
@@ -52,7 +53,9 @@ class AgentQ:
         q = self._get_q(state)
         return int(np.argmax(q))
 
-    def update_q_state_action(self, state: State, action: int, reward: float, next_state: State):
+    def update_q_state_action(
+        self, state: State, action: int, reward: float, next_state: State
+    ):
         """Update the Q-value for the given state-action pair."""
         max_q_next_state = np.max(self._get_q(next_state))
         td_target = reward + self.gamma * max_q_next_state
