@@ -76,7 +76,7 @@ class AgentNAL(Agent):
         if reward > 0:
             schema_g = self._add_schema(Schema(Concept(next_state), self.goal))
             schema_g.belief.truthv.revise(1.0, 0.5)  # w+ = w = 1.0
-            seq.desire.desirev.choose(DesireV(1.0, 0.99))  # w+ = w = 99
+            seq.desire.choose(DesireV(1.0, 0.99))  # w+ = w = 99
 
         # update seq.desirev
         next_seqs = self.sequence_table.get(next_state, [])
@@ -87,7 +87,7 @@ class AgentNAL(Agent):
         )
         max_desire = DesireV(max_desire.f, max_desire.c * 0.95)
         desirev = Desire_deduction(schema.belief.truthv, max_desire)
-        seq.desire.desirev.choose(desirev)
+        seq.desire.choose(desirev)
 
     def decay_epsilon(self):
         self.epsilon = max(self.epsilon_min, self.epsilon * self.epsilon_decay)

@@ -10,11 +10,17 @@ class Desire:
         self.instant = True
         self.t_schedule = -1
 
+    def choose(self, other_desirev: DesireV):
+        """Choose between current desirev and another one based on sharpness."""
+        self.desirev.choose(other_desirev)
+
+
 class Belief:
     def __init__(self, truthv: TruthV = None):
         self.truthv: TruthV = truthv or TruthV(0.5, 0.0)
         self.eternal = False
         self.t_occur = -1
+
 
 class Concept:
     def __init__(self, value):
@@ -35,7 +41,7 @@ class Concept:
 
     def __repr__(self):
         return f"{self.value}"
-    
+
     def term_str(self):
         return f"{self.value}"
 
@@ -62,13 +68,10 @@ class Sequence(Concept):
         return self.components == other.components
 
     def __repr__(self):
-        return (
-            f"{self.term_str()} {self.desire.desirev}!"
-        )
-    
+        return f"{self.term_str()} {self.desire.desirev}!"
+
     def term_str(self):
         return f"(&/, {', '.join(str(c.value) for c in self.components)})"
-
 
 
 class PredictiveImplication:
