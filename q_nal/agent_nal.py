@@ -55,7 +55,7 @@ class AgentNAL(Agent):
         sequences = self.sequence_table.get(state, [])
         if not sequences:
             return random.choice(self.actions)
-        es = [seq.desirev.e for seq in sequences]
+        es = [seq.desire.desirev.e for seq in sequences]
         idx = int(np.argmax(es))
         best_sequence = sequences[idx]
         best_action = best_sequence.components[1].value
@@ -71,23 +71,23 @@ class AgentNAL(Agent):
         seq = self._add_sequence(Sequence(Concept(state), Concept(action)))
         schema = self._add_schema(Schema(seq, Concept(next_state)))
         # schema
-        schema.truth.revise(1.0, 0.5)  # w+ = w = 1.0
+        schema.belief.truthv.revise(1.0, 0.5)  # w+ = w = 1.0
 
         if reward > 0:
             schema_g = self._add_schema(Schema(Concept(next_state), self.goal))
-            schema_g.truth.revise(1.0, 0.5)  # w+ = w = 1.0
-            seq.desirev.choose(DesireV(1.0, 0.99))  # w+ = w = 99
+            schema_g.belief.truthv.revise(1.0, 0.5)  # w+ = w = 1.0
+            seq.desire.desirev.choose(DesireV(1.0, 0.99))  # w+ = w = 99
 
         # update seq.desirev
         next_seqs = self.sequence_table.get(next_state, [])
         max_desire = max(
-            (seq.desirev for seq in next_seqs),
+            (seq.desire.desirev for seq in next_seqs),
             key=lambda dv: dv.e,
             default=DesireV(0.5, 0.0),
         )
         max_desire = DesireV(max_desire.f, max_desire.c * 0.95)
-        desirev = Desire_deduction(schema.truth, max_desire)
-        seq.desirev.choose(desirev)
+        desirev = Desire_deduction(schema.belief.truthv, max_desire)
+        seq.desire.desirev.choose(desirev)
 
     def decay_epsilon(self):
         self.epsilon = max(self.epsilon_min, self.epsilon * self.epsilon_decay)

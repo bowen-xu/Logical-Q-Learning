@@ -1,6 +1,7 @@
 /*.png
 .DS_Store
 .vscode
+.opencode
 
 # Byte-compiled / optimized / DLL files
 __pycache__/

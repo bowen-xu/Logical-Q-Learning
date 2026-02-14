@@ -96,7 +96,7 @@ def main():
         invalid_move_penalty=env_config["invalid_move_penalty"],
     )
 
-    agent = AgentQ(
+    agent = AgentNAL(
         actions=env.actions,
         alpha=agent_config["alpha"],
         gamma=agent_config["gamma"],

@@ -3,11 +3,24 @@ from .nal import DesireV, TruthV
 from weakref import WeakSet
 
 
+class Desire:
+    def __init__(self, desirev: DesireV = None):
+        self.desirev: DesireV = desirev or DesireV(0.5, 0.0)
+        self.best_solution: Belief = None
+        self.instant = True
+        self.t_schedule = -1
+
+class Belief:
+    def __init__(self, truthv: TruthV = None):
+        self.truthv: TruthV = truthv or TruthV(0.5, 0.0)
+        self.eternal = False
+        self.t_occur = -1
+
 class Concept:
     def __init__(self, value):
         self.value = value
-        self.desirev: DesireV = DesireV(0.5, 0.0)
-        self.truthv: TruthV = TruthV(0.5, 0.0)
+        self.desire = Desire()
+        self.belief = Belief()
 
         self.antecedents: WeakSet[Schema] = WeakSet()
         self.consequents: WeakSet[Schema] = WeakSet()
@@ -50,11 +63,11 @@ class Sequence(Concept):
 
     def __repr__(self):
         return (
-            f"{self.term_str()} {self.desirev}!"
+            f"{self.term_str()} {self.desire.desirev}!"
         )
     
     def term_str(self):
-        f"(&/, {', '.join(str(c.value) for c in self.components)})"
+        return f"(&/, {', '.join(str(c.value) for c in self.components)})"
 
 
 
@@ -67,7 +80,7 @@ class PredictiveImplication:
         antecedent.consequents.add(self)
         consequent.antecedents.add(self)
 
-        self.truth = truth or TruthV(0.5, 0.0)
+        self.belief = Belief(truth)
 
     def __hash__(self):
         return hash((self.antecedent, self.consequent))
@@ -83,7 +96,7 @@ class PredictiveImplication:
         )
 
     def __repr__(self):
-        return f"({self.antecedent.term_str()} =/> {self.consequent.term_str()}) {self.truth}"
+        return f"({self.antecedent.term_str()} =/> {self.consequent.term_str()}) {self.belief.truthv}"
 
 
 Schema = PredictiveImplication

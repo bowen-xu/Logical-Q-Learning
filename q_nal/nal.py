@@ -1,3 +1,5 @@
+from __future__ import annotations
+
 from functools import reduce
 from statistics import mean
 from operator import mul
