@@ -14,12 +14,6 @@ import matplotlib.pyplot as plt
 from tqdm import tqdm
 
 
-def load_config():
-    """Load configuration from config.yml"""
-    config_path = Path(__file__).parent / "config.yml"
-    with open(config_path, "r") as f:
-        return yaml.safe_load(f)
-
 
 def run_episode(env: GridWorld, agent, max_steps: int = 20) -> float:
     """Run one episode, return total reward"""

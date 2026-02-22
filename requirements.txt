@@ -2,3 +2,4 @@ numpy
 PyYAML
 matplotlib
 tqdm
+pygame

@@ -13,7 +13,7 @@ type State = str
 
 
 class LinearChain:
-    """
+    r"""
     Linear chain environment with two branches:
     
          S1 -> S2 -> G1

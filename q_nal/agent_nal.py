@@ -74,7 +74,8 @@ class AgentNAL(Agent):
         schema.belief.truthv.revise(1.0, 0.5)  # w+ = w = 1.0
 
         if reward > 0:
-            schema_g = self._add_schema(Schema(Concept(next_state), self.goal))
+            seq_g = self._add_sequence(Sequence(Concept(next_state), Concept(-1)))
+            schema_g = self._add_schema(Schema(seq_g, self.goal))
             schema_g.belief.truthv.revise(1.0, 0.5)  # w+ = w = 1.0
             seq.desire.choose(DesireV(1.0, 0.99))  # w+ = w = 99
 
@@ -83,9 +84,11 @@ class AgentNAL(Agent):
         max_desire = max(
             (seq.desire.desirev for seq in next_seqs),
             key=lambda dv: dv.e,
-            default=DesireV(0.5, 0.0),
+            default=None,
         )
-        max_desire = DesireV(max_desire.f, max_desire.c * 0.95)
+        if max_desire is None:
+            return
+        max_desire = DesireV(max_desire.f, max_desire.c)
         desirev = Desire_deduction(schema.belief.truthv, max_desire)
         seq.desire.choose(desirev)
 

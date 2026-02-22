@@ -1,26 +1,6 @@
 from .nal import DesireV, TruthV
-
+from .elements import Desire, Belief
 from weakref import WeakSet
-
-
-class Desire:
-    def __init__(self, desirev: DesireV = None):
-        self.desirev: DesireV = desirev or DesireV(0.5, 0.0)
-        self.best_solution: Belief = None
-        self.instant = True
-        self.t_schedule = -1
-
-    def choose(self, other_desirev: DesireV):
-        """Choose between current desirev and another one based on sharpness."""
-        # self.desirev.choose(other_desirev)
-        self.desirev = DesireV(other_desirev.f, other_desirev.c)
-
-
-class Belief:
-    def __init__(self, truthv: TruthV = None):
-        self.truthv: TruthV = truthv or TruthV(0.5, 0.0)
-        self.eternal = False
-        self.t_occur = -1
 
 
 class Concept:
@@ -28,9 +8,9 @@ class Concept:
         self.value = value
         self.desire = Desire()
         self.belief = Belief()
-
-        self.antecedents: WeakSet[Schema] = WeakSet()
-        self.consequents: WeakSet[Schema] = WeakSet()
+        self.upper_sequences = WeakSet[Sequence]()
+        self.in_schemas = WeakSet[Schema]()
+        self.out_schemas = WeakSet[Schema]()
 
     def __eq__(self, other):
         if not isinstance(other, Concept):
@@ -39,6 +19,10 @@ class Concept:
 
     def __hash__(self):
         return hash(self.value)
+
+    @staticmethod
+    def compute_hash(value):
+        return hash(value)
 
     def __repr__(self):
         return f"{self.value}"
@@ -50,9 +34,11 @@ class Concept:
 class Sequence(Concept):
     def __init__(self, *args: Concept):
         Concept.__init__(self, tuple(args))
+        c0 = args[0]
+        c0.upper_sequences.add(self)
 
     @property
-    def components(self):
+    def components(self) -> tuple[Concept]:
         return self.value
 
     def __len__(self):
@@ -60,6 +46,10 @@ class Sequence(Concept):
 
     def __hash__(self):
         return hash(self.components)
+
+    @staticmethod
+    def compute_hash(*components):
+        return hash(tuple(components))
 
     def __eq__(self, other):
         if not isinstance(other, Sequence):
@@ -74,6 +64,12 @@ class Sequence(Concept):
     def term_str(self):
         return f"(&/, {', '.join(str(c.value) for c in self.components)})"
 
+    def evaluate_desire(self) -> float:
+        return self.evaluate_desire_by_e()
+
+    def evaluate_desire_by_e(self):
+        return self.desire.desirev.e
+
 
 class PredictiveImplication:
     def __init__(
@@ -81,13 +77,17 @@ class PredictiveImplication:
     ):
         self.antecedent = antecedent
         self.consequent = consequent
-        antecedent.consequents.add(self)
-        consequent.antecedents.add(self)
+        antecedent.out_schemas.add(self)
+        consequent.in_schemas.add(self)
 
-        self.belief = Belief(truth)
+        self.belief = Belief(truth) if truth is not None else None
 
     def __hash__(self):
         return hash((self.antecedent, self.consequent))
+
+    @staticmethod
+    def compute_hash(antecedent, consequent):
+        return hash((antecedent, consequent))
 
     def __eq__(self, other):
         if not isinstance(other, PredictiveImplication):
