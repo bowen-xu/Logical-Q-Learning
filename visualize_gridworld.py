@@ -4,12 +4,19 @@ Visualizes the agent's movement in the GridWorld environment step by step.
 Shows the optimal path with directional arrows at the end.
 """
 
+import os
+
+os.environ["SDL_VIDEODRIVER"] = "dummy"
+
 import pygame
 import sys
 import yaml
 import random
 from pathlib import Path
 from PIL import Image
+from tqdm import tqdm
+from plot_rewards import plot_rewards
+
 
 # Add parent directory to path for imports
 sys.path.insert(0, str(Path(__file__).parent))
@@ -22,6 +29,11 @@ scale_apple = 3 / 5
 scale_carpet = 3 / 5
 scale_stone = 0.7
 scale_agent = 1.8
+
+obstacle_probability = 0.35
+seed = 20260228
+
+rewards_path = None
 
 
 class GridWorldVisualizer:
@@ -64,6 +76,11 @@ class GridWorldVisualizer:
         # Control mode
         self.show_optimal_path = False
         self.optimal_path = []
+
+    def grid_to_pygame(self, pos):
+        """Convert grid coordinates (origin at bottom-left) to pygame coordinates (origin at top-left)"""
+        x, y = pos
+        return (x, self.grid_size - 1 - y)
 
     def load_sprites(self):
         sprites = {}
@@ -133,17 +150,19 @@ class GridWorldVisualizer:
         return sheet.subsurface(pygame.Rect(x, y, cell_size[0], cell_size[1]))
 
     def draw_grid(self):
-        for y in range(self.grid_size):
+        for grid_y in range(self.grid_size):
             for x in range(self.grid_size):
+                # Convert grid coords to pygame coords
+                pygame_y = self.grid_size - 1 - grid_y
                 rect = pygame.Rect(
                     x * self.cell_size,
-                    y * self.cell_size,
+                    pygame_y * self.cell_size,
                     self.cell_size,
                     self.cell_size,
                 )
 
-                is_top = y == 0
-                is_bottom = y == self.grid_size - 1
+                is_top = grid_y == self.grid_size - 1  # top in grid = max y
+                is_bottom = grid_y == 0  # bottom in grid = y=0
                 is_left = x == 0
                 is_right = x == self.grid_size - 1
 
@@ -177,9 +196,9 @@ class GridWorldVisualizer:
     def draw_obstacles(self):
         if "stone" in self.sprites:
             for obs in self.env.obstacles:
-                x, y = obs
+                x, y = self.grid_to_pygame(obs)
                 # 2/3 of cell size
-                obj_size = int(self.cell_size * scale_stone)
+                obj_size = int(self.cell_size * 2 / 3)
                 offset = (self.cell_size - obj_size) // 2
                 sprite = pygame.transform.scale(
                     self.sprites["stone"], (obj_size, obj_size)
@@ -190,7 +209,7 @@ class GridWorldVisualizer:
         else:
             # Fallback: draw gray squares
             for obs in self.env.obstacles:
-                x, y = obs
+                x, y = self.grid_to_pygame(obs)
                 rect = pygame.Rect(
                     x * self.cell_size + 4,
                     y * self.cell_size + 4,
@@ -200,14 +219,14 @@ class GridWorldVisualizer:
                 pygame.draw.rect(self.screen, (128, 128, 128), rect)
 
     def draw_goal(self):
-        x, y = self.env.goal
+        x, y = self.grid_to_pygame(self.env.goal)
         rect = pygame.Rect(
             x * self.cell_size, y * self.cell_size, self.cell_size, self.cell_size
         )
 
         if "apple" in self.sprites:
             # 2/3 of cell size
-            obj_size = int(self.cell_size * scale_apple)
+            obj_size = int(self.cell_size * 2 / 3)
             offset = (self.cell_size - obj_size) // 2
             sprite = pygame.transform.scale(self.sprites["apple"], (obj_size, obj_size))
             self.screen.blit(
@@ -221,14 +240,14 @@ class GridWorldVisualizer:
             self.screen.blit(text, text_rect)
 
     def draw_start(self):
-        x, y = self.env.start
+        x, y = self.grid_to_pygame(self.env.start)
         rect = pygame.Rect(
             x * self.cell_size, y * self.cell_size, self.cell_size, self.cell_size
         )
 
         if "carpet" in self.sprites:
             # 2/3 of cell size
-            obj_size = int(self.cell_size * scale_carpet)
+            obj_size = int(self.cell_size * 2 / 3)
             offset = (self.cell_size - obj_size) // 2
             sprite = pygame.transform.scale(
                 self.sprites["carpet"], (obj_size, obj_size)
@@ -246,11 +265,11 @@ class GridWorldVisualizer:
         if position is None:
             position = self.agent_pos
 
-        x, y = position
+        x, y = self.grid_to_pygame(position)
 
         if "agent" in self.sprites:
             # Scale by 2x, then crop center to fit cell
-            scaled_size = self.cell_size * scale_agent
+            scaled_size = self.cell_size * 2
             scaled_sprite = pygame.transform.scale(
                 self.sprites["agent"], (scaled_size, scaled_size)
             )
@@ -270,70 +289,101 @@ class GridWorldVisualizer:
             pygame.draw.circle(self.screen, self.RED, center, self.cell_size // 3)
             pygame.draw.circle(self.screen, self.WHITE, center, self.cell_size // 3, 2)
 
-    def draw_arrow(self, position, direction):
-        """Draw a directional arrow at the given position"""
-        x, y = position
+    def draw_arrow(self, position, direction, alpha=255):
+        import math
+
+        x, y = self.grid_to_pygame(position)
         center_x = x * self.cell_size + self.cell_size // 2
         center_y = y * self.cell_size + self.cell_size // 2
 
-        # Arrow direction mapping
         arrows = {
-            0: (0, -1),  # up
-            1: (1, 0),  # right
-            2: (0, 1),  # down
-            3: (-1, 0),  # left
+            0: (0, 1),
+            1: (1, 0),
+            2: (0, -1),
+            3: (-1, 0),
         }
 
         dx, dy = arrows.get(direction, (0, 0))
 
-        # Draw arrow
-        arrow_size = self.cell_size // 3
-        points = []
+        # Equilateral triangle height
+        h = self.cell_size // 3
+        # Side length for equilateral triangle: s = 2 * h / sqrt(3)
+        s = 2 * h / math.sqrt(3)
 
-        if dx == 0 and dy == -1:  # up
-            points = [
-                (center_x, center_y - arrow_size),
-                (center_x - arrow_size // 2, center_y),
-                (center_x + arrow_size // 2, center_y),
-            ]
+        # Distance from centroid to tip = 2h/3
+        # Distance from centroid to base midpoint = h/3
+        tip_dist = 2 * h / 3
+        base_dist = h / 3
+
+        tip = base_left = base_right = None
+
+        if dx == 0 and dy == 1:  # up
+            tip = (center_x, center_y - tip_dist)
+            base_center = (center_x, center_y + base_dist)
+            base_left = (base_center[0] - s / 2, base_center[1])
+            base_right = (base_center[0] + s / 2, base_center[1])
         elif dx == 1 and dy == 0:  # right
-            points = [
-                (center_x + arrow_size, center_y),
-                (center_x, center_y - arrow_size // 2),
-                (center_x, center_y + arrow_size // 2),
-            ]
-        elif dx == 0 and dy == 1:  # down
-            points = [
-                (center_x, center_y + arrow_size),
-                (center_x - arrow_size // 2, center_y),
-                (center_x + arrow_size // 2, center_y),
-            ]
+            tip = (center_x + tip_dist, center_y)
+            base_center = (center_x - base_dist, center_y)
+            base_left = (base_center[0], base_center[1] - s / 2)
+            base_right = (base_center[0], base_center[1] + s / 2)
+        elif dx == 0 and dy == -1:  # down
+            tip = (center_x, center_y + tip_dist)
+            base_center = (center_x, center_y - base_dist)
+            base_left = (base_center[0] - s / 2, base_center[1])
+            base_right = (base_center[0] + s / 2, base_center[1])
         elif dx == -1 and dy == 0:  # left
-            points = [
-                (center_x - arrow_size, center_y),
-                (center_x, center_y - arrow_size // 2),
-                (center_x, center_y + arrow_size // 2),
-            ]
+            tip = (center_x - tip_dist, center_y)
+            base_center = (center_x + base_dist, center_y)
+            base_left = (base_center[0], base_center[1] - s / 2)
+            base_right = (base_center[0], base_center[1] + s / 2)
 
-        if points:
-            pygame.draw.polygon(self.screen, self.YELLOW, points)
+        if tip is not None:
+            points = [tip, base_left, base_right]
+
+            if alpha < 255:
+                surf = pygame.Surface((self.cell_size, self.cell_size), pygame.SRCALPHA)
+                color = (255, 0, 0, alpha)
+                pygame.draw.polygon(
+                    surf,
+                    color,
+                    [
+                        (p[0] - x * self.cell_size, p[1] - y * self.cell_size)
+                        for p in points
+                    ],
+                )
+                self.screen.blit(surf, (x * self.cell_size, y * self.cell_size))
+            else:
+                pygame.draw.polygon(self.screen, (255, 0, 0), points)
 
     def draw_optimal_path(self):
-        """Draw the optimal path with arrows"""
-        for i, (pos, action) in enumerate(self.optimal_path):
-            self.draw_arrow(pos, action)
+        # Compute optimal path if not already done
+        if not self.optimal_path:
+            self.compute_optimal_path()
 
-            # Draw path number
-            x, y = pos
-            rect = pygame.Rect(
-                x * self.cell_size, y * self.cell_size, self.cell_size, self.cell_size
-            )
-            font = pygame.font.Font(None, 24)
-            text = font.render(str(i + 1), True, self.WHITE)
-            text_rect = text.get_rect(
-                center=(rect.centerx, rect.centery - self.cell_size // 4)
-            )
-            self.screen.blit(text, text_rect)
+        # Get set of optimal path states
+        optimal_states = set(pos for pos, _ in self.optimal_path)
+
+        # First, draw all non-optimal arrows with 0.5 alpha
+        for grid_y in range(self.grid_size):
+            for x in range(self.grid_size):
+                state = (x, grid_y)
+                if state == self.env.start:
+                    continue
+                if state == self.env.goal:
+                    continue
+                if state in self.env.obstacles:
+                    continue
+                if not self.env.state_is_valid(state):
+                    continue
+
+                action = self.agent.select_action(state)
+                if state in optimal_states:
+                    # Optimal path: opaque
+                    self.draw_arrow(state, action, alpha=255)
+                else:
+                    # Non-optimal: 0.5 alpha
+                    self.draw_arrow(state, action, alpha=128)
 
     def compute_optimal_path(self):
         """Compute the optimal path from start to goal using the learned policy"""
@@ -411,66 +461,108 @@ class GridWorldVisualizer:
         # Decay epsilon
         self.agent.decay_epsilon()
 
-    def run_training(self, num_episodes: int = 100, delay: int = 100):
-        """Run training episodes with visualization"""
-        for episode in range(num_episodes):
-            # Handle events
-            for event in pygame.event.get():
-                if event.type == pygame.QUIT:
-                    pygame.quit()
-                    sys.exit()
+    def run_training(
+        self,
+        num_episodes: int = 100,
+        delay: int = 100,
+        record_interval: int = 0,
+        output_dir: str = ".",
+    ):
+        global rewards_path
+        import os
+        import pickle
+        from PIL import Image
 
-            # Run one episode
+        os.makedirs(output_dir, exist_ok=True)
+
+        rewards_history = []
+        self.total_reward = 0.0
+
+        is_recording = record_interval > 0
+
+        for episode in tqdm(range(num_episodes), desc="Training"):
+            should_record = is_recording and (
+                episode % record_interval == 0 or episode == num_episodes - 1
+            )
+
             state = self.env.reset()
             self.agent_pos = state
-            self.draw()
-
-            pygame.display.set_caption(
-                f"GridWorld - Episode {episode + 1}/{num_episodes}"
-            )
-            pygame.display.flip()
 
             max_steps = 100
-            episode_reward = 0
+            episode_reward = 0.0
 
             for step in range(max_steps):
-                # Handle events during episode
-                for event in pygame.event.get():
-                    if event.type == pygame.QUIT:
-                        pygame.quit()
-                        sys.exit()
-
-                # Select action
                 action = self.agent.select_action(state)
-
-                # Execute action
                 next_state, reward = self.env.step(state, action)
-
-                # Update agent
                 self.agent.update_q_state_action(state, action, reward, next_state)
+                self.agent_pos = next_state
 
                 episode_reward += reward
-
-                # Update position
-                self.agent_pos = next_state
-                self.draw()
-
-                pygame.display.flip()
-                pygame.time.delay(delay)
-
                 state = next_state
 
-                # Reached goal
                 if state == self.env.goal:
                     break
 
-            # Decay epsilon
             self.agent.decay_epsilon()
+            rewards_history.append(episode_reward)
+            self.total_reward = episode_reward
 
-            if (episode + 1) % 10 == 0:
-                print(
-                    f"Episode {episode + 1}/{num_episodes}, Epsilon: {self.agent.epsilon:.4f}"
+            if should_record:
+                if not pygame.display.get_init():
+                    pygame.display.init()
+
+                episode_frames = []
+                state = self.env.reset()
+                self.agent_pos = state
+                self.draw()
+                pygame.display.flip()
+
+                for step in range(max_steps):
+                    action = self.agent.select_action(state)
+                    next_state, reward = self.env.step(state, action)
+                    self.agent_pos = next_state
+                    self.draw()
+                    pygame.display.flip()
+
+                    img_str = pygame.image.tostring(self.screen, "RGB")
+                    img = Image.frombytes("RGB", self.screen.get_size(), img_str)
+                    episode_frames.append(img)
+
+                    state = next_state
+                    if state == self.env.goal:
+                        break
+
+                gif_path = os.path.join(output_dir, f"episode_{episode:04d}.gif")
+                episode_frames[0].save(
+                    gif_path,
+                    save_all=True,
+                    append_images=episode_frames[1:],
+                    duration=delay,
+                    loop=0,
                 )
+                tqdm.write(f"Recorded: {gif_path}")
+
+                # Save conet sequences desirev with term_str as key
+                desirev_data = {}
+                for seq in self.agent.conet.sequences.values():
+                    term = seq.term_str()
+                    desirev = seq.desire.desirev if seq.desire else None
+                    if desirev:
+                        desirev_data[term] = {
+                            "f": desirev.f,
+                            "c": desirev.c,
+                        }
+
+                pickle_path = os.path.join(output_dir, f"episode_{episode:04d}.pkl")
+                with open(pickle_path, "wb") as f:
+                    pickle.dump(desirev_data, f)
+                tqdm.write(f"Saved: {pickle_path}")
+
+        # Save rewards history
+        rewards_path = os.path.join(output_dir, "rewards.pkl")
+        with open(rewards_path, "wb") as f:
+            pickle.dump(rewards_history, f)
+        print(f"Saved rewards: {rewards_path}")
 
     def show_result(self):
         self.compute_optimal_path()
@@ -492,6 +584,78 @@ class GridWorldVisualizer:
                     ):
                         running = False
 
+    def record_final(
+        self, output_path: str = "final.png", trajectory_path: str = "trajectory.png"
+    ):
+        from PIL import Image
+
+        self.agent.epsilon = 0.0
+        self.compute_optimal_path()
+        self.show_optimal_path = True
+
+        # Draw the final state with arrows
+        self.draw()
+        pygame.display.flip()
+
+        # Save as PNG
+        img_str = pygame.image.tostring(self.screen, "RGB")
+        img = Image.frombytes("RGB", self.screen.get_size(), img_str)
+
+        # Ensure output_path ends with .png
+        if not output_path.endswith(".png"):
+            output_path = output_path.rsplit(".", 1)[0] + ".png"
+
+        img.save(output_path)
+        print(f"Saved final result: {output_path}")
+
+        # Draw trajectory image (without arrows)
+        self.show_optimal_path = False
+        self.draw()
+
+        # Draw agents along the optimal path with fading alpha
+        path_len = len(self.optimal_path)
+        if path_len > 0:
+            for i, (pos, action) in enumerate(self.optimal_path):
+                # Skip start and end
+                if pos == self.env.start or pos == self.env.goal:
+                    continue
+                # Alpha from 0.1 to 1.0
+                alpha = int(0.1 * 255 + (0.9 * i / (path_len - 1)) * 255)
+                self.draw_agent_at_position(pos, alpha)
+
+        pygame.display.flip()
+
+        img_str = pygame.image.tostring(self.screen, "RGB")
+        img = Image.frombytes("RGB", self.screen.get_size(), img_str)
+
+        if not trajectory_path.endswith(".png"):
+            trajectory_path = trajectory_path.rsplit(".", 1)[0] + ".png"
+
+        img.save(trajectory_path)
+        print(f"Saved trajectory: {trajectory_path}")
+
+    def draw_agent_at_position(self, position, alpha=255):
+        x, y = self.grid_to_pygame(position)
+
+        if "agent" in self.sprites:
+            scaled_size = self.cell_size * 2
+            scaled_sprite = pygame.transform.scale(
+                self.sprites["agent"], (scaled_size, scaled_size)
+            )
+            offset = (scaled_size - self.cell_size) // 2
+            cropped = scaled_sprite.subsurface(
+                pygame.Rect(offset, offset, self.cell_size, self.cell_size)
+            )
+
+            if alpha < 255:
+                surf = pygame.Surface((self.cell_size, self.cell_size), pygame.SRCALPHA)
+                orig_alpha = cropped.get_alpha()
+                cropped.set_alpha(alpha)
+                surf.blit(cropped, (0, 0))
+                self.screen.blit(surf, (x * self.cell_size, y * self.cell_size))
+            else:
+                self.screen.blit(cropped, (x * self.cell_size, y * self.cell_size))
+
     def draw(self):
         self.screen.fill((255, 255, 255))
         self.draw_grid()
@@ -506,12 +670,16 @@ class GridWorldVisualizer:
 
 
 def main():
+    import random
+
+    random.seed(seed)
+
     print("=== GridWorld Visualization ===\n")
 
     # Create environment
     env = GridWorld(
         grid_size=7,
-        obstacle_probability=0.2,
+        obstacle_probability=obstacle_probability,
         step_reward=-0.1,
         goal_reward=10.0,
         invalid_move_penalty=-1.0,
@@ -533,16 +701,25 @@ def main():
     # Create visualizer
     visualizer = GridWorldVisualizer(env, agent, cell_size=80)
 
-    # Run training
-    print("Training agent (this will show a window, close it to continue)...")
-    visualizer.run_training(num_episodes=20, delay=30)
+    # Run training with recording
+    print("Training agent with GIF recording...")
+    print("Recording at episode 0, 500, 1000, 1500, 2000, 2500, 3000")
+    visualizer.run_training(
+        num_episodes=3000, delay=50, record_interval=500, output_dir="recordings"
+    )
 
-    print("\nShowing optimal path...")
-    print("Close the window or press ESC/q/Space to exit")
-    visualizer.show_result()
+    # Record final result with epsilon=0
+    print("\nRecording final result...")
+    visualizer.record_final(
+        output_path="recordings/final.png", trajectory_path="recordings/trajectory.png"
+    )
+
+    # Plot rewards
+    if rewards_path is not None:
+        plot_rewards(rewards_path, smooth_window=50)
 
     pygame.quit()
-    print("Done!")
+    print("\nDone! All recordings saved to 'recordings/' directory")
 
 
 if __name__ == "__main__":

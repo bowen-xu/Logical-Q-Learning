@@ -7,12 +7,7 @@ from lql.agent import Agent
 import matplotlib.pyplot as plt
 from tqdm import tqdm
 from grid_world import GridWorld
-
-import numpy as np
-
-def smooth(rewards, window=10):
-    return np.convolve(rewards, np.ones(window)/window, mode='valid')
-
+from utils import smooth
 
 def run_episode(env: GridWorld, agent: Agent, max_steps: int = 20) -> float:
     """Run one episode, return total reward"""

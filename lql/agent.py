@@ -65,7 +65,7 @@ class Agent:
         else:
             desirev_reward = DesireV(0.5, 0.0)
 
-        current_concept.desire.overwrite(desirev_reward)
+        current_concept.desire.revise(desirev_reward, c_max=0.9)
 
         # desirev_max_next_seq <-> max_{a'}{Q(s', a')}
         if not current_concept.upper_sequences:
