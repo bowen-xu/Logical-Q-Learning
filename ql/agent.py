@@ -17,11 +17,9 @@ Classes:
 import random
 import numpy as np
 
-from .grid_world import State
-from .agent import Agent
 
 
-class AgentQ(Agent):
+class Agent:
 
     def __init__(
         self,
@@ -40,13 +38,13 @@ class AgentQ(Agent):
         self.epsilon_decay = epsilon_decay
         self.q_table: dict[State, np.ndarray] = {}
 
-    def _get_q(self, state: State) -> np.ndarray:
+    def _get_q(self, state) -> np.ndarray:
         """Get the Q-value for all actions for the given state."""
         if state not in self.q_table:
             self.q_table[state] = np.zeros(len(self.actions), dtype=np.float32)
         return self.q_table[state]
 
-    def select_action(self, state: State) -> int:
+    def select_action(self, state) -> int:
         """Select an action based on epsilon-greedy policy."""
         if random.random() < self.epsilon:
             return random.choice(self.actions)
@@ -54,7 +52,7 @@ class AgentQ(Agent):
         return int(np.argmax(q))
 
     def update_q_state_action(
-        self, state: State, action: int, reward: float, next_state: State
+        self, state, action: int, reward: float, next_state
     ):
         """Update the Q-value for the given state-action pair."""
         max_q_next_state = np.max(self._get_q(next_state))

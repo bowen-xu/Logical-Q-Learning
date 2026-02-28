@@ -6,10 +6,8 @@ import yaml
 import random
 from pathlib import Path
 
-from q_nal.grid_world import GridWorld
-from q_nal.agent_nal import AgentNAL
-from q_nal.agent_q import AgentQ
-from q_nal.agent import Agent
+from grid_world import GridWorld
+from ql.agent import Agent
 
 import matplotlib.pyplot as plt
 from tqdm import tqdm
@@ -96,7 +94,7 @@ def main():
         invalid_move_penalty=env_config["invalid_move_penalty"],
     )
 
-    agent = AgentNAL(
+    agent = Agent(
         actions=env.actions,
         alpha=agent_config["alpha"],
         gamma=agent_config["gamma"],

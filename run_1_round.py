@@ -6,13 +6,18 @@ import yaml
 import random
 from pathlib import Path
 
-from q_nal.grid_world import GridWorld
-from q_nal.agent_nal import AgentNAL
-from q_nal.agent_q import AgentQ
+from grid_world import GridWorld
+from ql.agent import Agent
 
 import matplotlib.pyplot as plt
 from tqdm import tqdm
 
+
+def load_config():
+    """Load configuration from config.yml"""
+    config_path = Path(__file__).parent / "config.yml"
+    with open(config_path, "r") as f:
+        return yaml.safe_load(f)
 
 
 def run_episode(env: GridWorld, agent, max_steps: int = 20) -> float:
@@ -44,7 +49,7 @@ def run_episode(env: GridWorld, agent, max_steps: int = 20) -> float:
 
 
 def print_step(
-    env: GridWorld, agent: AgentNAL, state, action, reward, next_state, step: int
+    env: GridWorld, agent: Agent, state, action, reward, next_state, step: int
 ):
     """Print step information"""
     action_names = {0: "up", 1: "right", 2: "down", 3: "left"}
@@ -89,7 +94,7 @@ def main():
         invalid_move_penalty=env_config["invalid_move_penalty"],
     )
 
-    agent = AgentQ(
+    agent = Agent(
         actions=env.actions,
         alpha=agent_config["alpha"],
         gamma=agent_config["gamma"],
