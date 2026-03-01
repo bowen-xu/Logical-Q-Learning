@@ -15,12 +15,14 @@ class Agent:
         epsilon: float = 1.0,
         epsilon_min: float = 0.01,
         epsilon_decay: float = 0.995,
+        c_max=0.9,
     ):
         self.conet = ConceptNetwork()
         self.actions = list(actions)
         self.epsilon = epsilon
         self.epsilon_min = epsilon_min
         self.epsilon_decay = epsilon_decay
+        self.c_max = c_max
 
     def select_action(self, state, epsilon=None):
         if epsilon is None:
@@ -65,7 +67,7 @@ class Agent:
         else:
             desirev_reward = DesireV(0.5, 0.0)
 
-        current_concept.desire.revise(desirev_reward, c_max=0.9)
+        current_concept.desire.revise(desirev_reward, c_max=self.c_max)
 
         # desirev_max_next_seq <-> max_{a'}{Q(s', a')}
         if not current_concept.upper_sequences:
@@ -80,14 +82,14 @@ class Agent:
         desirev_current = copy(current_concept.desire.desirev)
         if desirev_max_next_seq is not None:
             desirev_current.revise(
-                desirev_max_next_seq.f, desirev_max_next_seq.c, c_max=0.9
+                desirev_max_next_seq.f, desirev_max_next_seq.c, c_max=self.c_max
             )
 
         # (s, a) =/> s', s'! |- (s, a)!
         desirev_last_seq: DesireV = copy(
             Desire_deduction(schema.belief.truthv, desirev_current)
         )
-        last_seq.desire.overwrite(desirev_last_seq)
+        last_seq.desire.revise(desirev_last_seq)
 
     def decay_epsilon(self):
         self.epsilon = max(self.epsilon_min, self.epsilon * self.epsilon_decay)

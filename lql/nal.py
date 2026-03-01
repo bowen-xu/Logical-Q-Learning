@@ -8,7 +8,7 @@ fc_to_w_plus = lambda f, c, k: k * f * c / (1 - c)
 c_to_w = lambda c, k: k * c / (1 - c)
 fc_to_w_minus = lambda f, c, k: k * (1 - f) * c / (1 - c)
 
-w_to_f = lambda w_plus, w: w_plus / w
+w_to_f = lambda w_plus, w: w_plus / max(w, 1e-5)
 w_to_c = lambda w, k: w / (w + k)
 
 Not = lambda x: (1 - x)
