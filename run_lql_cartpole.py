@@ -10,8 +10,9 @@ Design aligned with run_1_round.py:
 from __future__ import annotations
 
 import math
+import pickle
 import random
-import time
+from pathlib import Path
 from typing import Callable, Tuple
 
 import gymnasium as gym
@@ -22,8 +23,10 @@ from sklearn.preprocessing import KBinsDiscretizer
 try:
     from tqdm import trange
 except Exception:
+
     def trange(n, **kwargs):  # type: ignore
         return range(n)
+
 
 # Fixed experiment config (no CLI/env overrides)
 SEED = 42
@@ -33,15 +36,15 @@ EPSILON = 1.0
 EPSILON_MIN = 0.01
 EPSILON_DECAY = 0.995
 FINAL_EVAL_EPSILON = 0.0
-TERMINAL_PENALTY = -10.0
-STEP_REWARD = 0.05
-UPRIGHT_BONUS = 1.0
+TERMINAL_PENALTY = -5.0
+STEP_REWARD = 0.1
+UPRIGHT_BONUS = 5.0
 UPRIGHT_ANGLE_THRESHOLD = math.radians(3.0)
-UPRIGHT_ANGVEL_THRESHOLD = 0.5
-UPRIGHT_CART_POS_THRESHOLD = 0.5
-UPRIGHT_CART_VEL_THRESHOLD = 0.8
 
 TERMINAL_FAILURE_PENALTY = TERMINAL_PENALTY
+RECORDING_DIR = Path("recordings/cartpole_lql")
+REWARD_PKL_PATH = RECORDING_DIR / "rewards_raw.pkl"
+DEMO_GIF_PATH = RECORDING_DIR / "cartpole_lql_demo.gif"
 
 
 def make_discretizer(env: gym.Env) -> Callable[[np.ndarray], Tuple[int, ...]]:
@@ -82,18 +85,14 @@ def run_episode(
         # 1) failure termination -> negative reward
         # 2) normal states -> small positive reward
         # 3) near-upright and stable states -> extra positive bonus
-        if terminated:
-            lql_reward = TERMINAL_FAILURE_PENALTY
-        else:
+
+        if truncated or not terminated:
             lql_reward = STEP_REWARD
-            cart_pos, cart_vel, angle, ang_vel = next_obs
-            if (
-                abs(angle) <= UPRIGHT_ANGLE_THRESHOLD
-                and abs(ang_vel) <= UPRIGHT_ANGVEL_THRESHOLD
-                and abs(cart_pos) <= UPRIGHT_CART_POS_THRESHOLD
-                and abs(cart_vel) <= UPRIGHT_CART_VEL_THRESHOLD
-            ):
+            _, _, angle, _ = next_obs
+            if abs(angle) <= UPRIGHT_ANGLE_THRESHOLD:
                 lql_reward += UPRIGHT_BONUS
+        else:
+            lql_reward = TERMINAL_FAILURE_PENALTY
         agent.update_q_state_action(state, action, lql_reward, next_state)
         state = next_state
         total_reward += reward
@@ -102,7 +101,7 @@ def run_episode(
     return total_reward
 
 
-def train() -> Agent:
+def train() -> tuple[Agent, list[float]]:
     random.seed(SEED)
     np.random.seed(SEED)
 
@@ -117,11 +116,14 @@ def train() -> Agent:
         epsilon=EPSILON,
         epsilon_min=EPSILON_MIN,
         epsilon_decay=EPSILON_DECAY,
+        c_max=0.8,
     )
+    rewards_raw: list[float] = []
 
     progress = trange(N_EPISODES, desc="Training", unit="ep")
     for episode in progress:
         total_reward = run_episode(env, agent, discretize)
+        rewards_raw.append(total_reward)
         if hasattr(progress, "set_postfix"):
             if episode % 50 == 0 or episode == N_EPISODES - 1:
                 progress.set_postfix(
@@ -132,68 +134,63 @@ def train() -> Agent:
                 )
 
     env.close()
-    return agent
+    return agent, rewards_raw
+
+
+def save_rewards(rewards_raw: list[float]) -> None:
+    """Save raw-environment rewards as pkl under recordings/cartpole_lql."""
+    RECORDING_DIR.mkdir(parents=True, exist_ok=True)
+    with REWARD_PKL_PATH.open("wb") as f:
+        pickle.dump(rewards_raw, f)
+    print(f"Saved rewards PKL: {REWARD_PKL_PATH}")
 
 
 def visualize(agent: Agent) -> None:
-    """Visualize learned policy, fallback to GIF in headless environments."""
+    """Record one greedy demo episode to recordings/cartpole_lql."""
     random.seed(SEED)
     np.random.seed(SEED)
-
-    use_human = True
-    try:
-        env = gym.make("CartPole-v1", render_mode="human")
-    except Exception:
-        use_human = False
-        env = gym.make("CartPole-v1", render_mode="rgb_array")
+    RECORDING_DIR.mkdir(parents=True, exist_ok=True)
+    env = gym.make("CartPole-v1", render_mode="rgb_array")
 
     discretize = make_discretizer(env)
     old_epsilon = agent.epsilon
     agent.epsilon = FINAL_EVAL_EPSILON  # pure exploitation for final demo
 
     captured_frames = []
-    for demo_idx in range(1):
-        try:
-            obs, _ = env.reset(seed=SEED + 10000 + demo_idx)
-        except Exception:
-            env.close()
-            use_human = False
-            env = gym.make("CartPole-v1", render_mode="rgb_array")
-            discretize = make_discretizer(env)
-            obs, _ = env.reset(seed=SEED + 10000 + demo_idx)
+    obs, _ = env.reset(seed=SEED + 10000)
+    frame = env.render()
+    if frame is not None:
+        captured_frames.append(frame)
 
-        done = False
-        steps = 0
-        while not done and steps < DEMO_MAX_STEPS:
-            state = discretize(obs)
-            action = agent.select_action(state)
-            obs, _, terminated, truncated, _ = env.step(action)
-            done = terminated or truncated
-            steps += 1
-            if use_human:
-                time.sleep(0.02)
-            else:
-                frame = env.render()
-                if frame is not None:
-                    captured_frames.append(frame)
+    done = False
+    steps = 0
+    while not done and steps < DEMO_MAX_STEPS:
+        state = discretize(obs)
+        action = agent.select_action(state)
+        obs, _, terminated, truncated, _ = env.step(action)
+        done = terminated or truncated
+        steps += 1
+        frame = env.render()
+        if frame is not None:
+            captured_frames.append(frame)
 
     agent.epsilon = old_epsilon
     env.close()
 
-    if not use_human and captured_frames:
-        output_path = "cartpole_demo.gif"
+    if captured_frames:
         try:
             import imageio.v2 as imageio
 
-            imageio.mimsave(output_path, captured_frames, fps=30)
-            print(f"No display detected. Saved visualization to {output_path}")
+            imageio.mimsave(DEMO_GIF_PATH, captured_frames, fps=30)
+            print(f"Saved demo GIF: {DEMO_GIF_PATH}")
         except Exception:
-            print("No display detected and failed to save GIF (missing imageio).")
+            print("Failed to save demo GIF (missing imageio).")
 
 
 def main() -> None:
     print("=== CartPole LQL (lql.agent.Agent) ===")
-    agent = train()
+    agent, rewards_raw = train()
+    save_rewards(rewards_raw)
     print("Training finished. Start visualization...")
     visualize(agent)
 

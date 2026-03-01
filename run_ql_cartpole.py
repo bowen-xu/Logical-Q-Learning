@@ -10,8 +10,9 @@ Design aligned with run_1_round.py:
 from __future__ import annotations
 
 import math
+import pickle
 import random
-import time
+from pathlib import Path
 from typing import Callable, Tuple
 
 import gymnasium as gym
@@ -28,13 +29,16 @@ except Exception:
 # Fixed experiment config (no CLI/env overrides)
 SEED = 42
 N_EPISODES = 1000
-DEMO_MAX_STEPS = 200
+DEMO_MAX_STEPS = 500
 ALPHA = 0.1
 GAMMA = 0.98
 EPSILON = 1.0
 EPSILON_MIN = 0.01
 EPSILON_DECAY = 0.995
 FINAL_EVAL_EPSILON = 0.0
+RECORDING_DIR = Path("recordings/cartpole_ql")
+REWARD_PKL_PATH = RECORDING_DIR / "rewards_raw.pkl"
+DEMO_GIF_PATH = RECORDING_DIR / "cartpole_ql_demo.gif"
 
 
 def make_discretizer(env: gym.Env) -> Callable[[np.ndarray], Tuple[int, ...]]:
@@ -79,7 +83,7 @@ def run_episode(
     return total_reward
 
 
-def train() -> Agent:
+def train() -> tuple[Agent, list[float]]:
     random.seed(SEED)
     np.random.seed(SEED)
 
@@ -97,11 +101,13 @@ def train() -> Agent:
         epsilon_min=EPSILON_MIN,
         epsilon_decay=EPSILON_DECAY,
     )
+    rewards_raw: list[float] = []
 
     progress = trange(N_EPISODES, desc="Training", unit="ep")
     for episode in progress:
         agent.alpha = max(0.01, min(1.0, 1.0 - math.log10((episode + 1) / 25)))
         total_reward = run_episode(env, agent, discretize)
+        rewards_raw.append(total_reward)
         if hasattr(progress, "set_postfix"):
             if episode % 50 == 0 or episode == N_EPISODES - 1:
                 progress.set_postfix(
@@ -113,68 +119,62 @@ def train() -> Agent:
                 )
 
     env.close()
-    return agent
+    return agent, rewards_raw
+
+
+def save_rewards(rewards_raw: list[float]) -> None:
+    RECORDING_DIR.mkdir(parents=True, exist_ok=True)
+    with REWARD_PKL_PATH.open("wb") as f:
+        pickle.dump(rewards_raw, f)
+    print(f"Saved rewards PKL: {REWARD_PKL_PATH}")
 
 
 def visualize(agent: Agent) -> None:
-    """Visualize learned policy, fallback to GIF in headless environments."""
+    """Record one greedy demo episode to recordings/cartpole_ql."""
     random.seed(SEED)
     np.random.seed(SEED)
-
-    use_human = True
-    try:
-        env = gym.make("CartPole-v1", render_mode="human")
-    except Exception:
-        use_human = False
-        env = gym.make("CartPole-v1", render_mode="rgb_array")
+    RECORDING_DIR.mkdir(parents=True, exist_ok=True)
+    env = gym.make("CartPole-v1", render_mode="rgb_array")
 
     discretize = make_discretizer(env)
     old_epsilon = agent.epsilon
     agent.epsilon = FINAL_EVAL_EPSILON  # pure exploitation for final demo
 
     captured_frames = []
-    for demo_idx in range(1):
-        try:
-            obs, _ = env.reset(seed=SEED + 10000 + demo_idx)
-        except Exception:
-            env.close()
-            use_human = False
-            env = gym.make("CartPole-v1", render_mode="rgb_array")
-            discretize = make_discretizer(env)
-            obs, _ = env.reset(seed=SEED + 10000 + demo_idx)
+    obs, _ = env.reset(seed=SEED + 10000)
+    frame = env.render()
+    if frame is not None:
+        captured_frames.append(frame)
 
-        done = False
-        steps = 0
-        while not done and steps < DEMO_MAX_STEPS:
-            state = discretize(obs)
-            action = agent.select_action(state)
-            obs, _, terminated, truncated, _ = env.step(action)
-            done = terminated or truncated
-            steps += 1
-            if use_human:
-                time.sleep(0.02)
-            else:
-                frame = env.render()
-                if frame is not None:
-                    captured_frames.append(frame)
+    done = False
+    steps = 0
+    while not done and steps < DEMO_MAX_STEPS:
+        state = discretize(obs)
+        action = agent.select_action(state)
+        obs, _, terminated, truncated, _ = env.step(action)
+        done = terminated or truncated
+        steps += 1
+        frame = env.render()
+        if frame is not None:
+            captured_frames.append(frame)
 
     agent.epsilon = old_epsilon
     env.close()
 
-    if not use_human and captured_frames:
-        output_path = "cartpole_demo.gif"
+    if captured_frames:
         try:
             import imageio.v2 as imageio
 
-            imageio.mimsave(output_path, captured_frames, fps=30)
-            print(f"No display detected. Saved visualization to {output_path}")
+            imageio.mimsave(DEMO_GIF_PATH, captured_frames, fps=30)
+            print(f"Saved demo GIF: {DEMO_GIF_PATH}")
         except Exception:
-            print("No display detected and failed to save GIF (missing imageio).")
+            print("Failed to save demo GIF (missing imageio).")
 
 
 def main() -> None:
     print("=== CartPole Q-learning (ql.agent.Agent) ===")
-    agent = train()
+    agent, rewards_raw = train()
+    save_rewards(rewards_raw)
     print("Training finished. Start visualization...")
     visualize(agent)
 
