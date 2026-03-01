@@ -1,5 +1,9 @@
-numpy
-PyYAML
+gymnasium
+imageio
 matplotlib
-tqdm
+numpy
+pillow
 pygame
+PyYAML
+scikit-learn
+tqdm
