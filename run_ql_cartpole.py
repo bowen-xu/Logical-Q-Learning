@@ -28,7 +28,7 @@ except Exception:
 
 # Fixed experiment config (no CLI/env overrides)
 SEED = 42
-N_EPISODES = 1000
+N_EPISODES = 1500
 DEMO_MAX_STEPS = 500
 ALPHA = 0.1
 GAMMA = 0.98

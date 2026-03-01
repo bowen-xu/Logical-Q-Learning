@@ -30,7 +30,7 @@ except Exception:
 
 # Fixed experiment config (no CLI/env overrides)
 SEED = 42
-N_EPISODES = 1000
+N_EPISODES = 1500
 DEMO_MAX_STEPS = 500
 EPSILON = 1.0
 EPSILON_MIN = 0.01
