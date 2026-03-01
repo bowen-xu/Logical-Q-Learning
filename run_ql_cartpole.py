@@ -165,7 +165,7 @@ def visualize(agent: Agent) -> None:
         try:
             import imageio.v2 as imageio
 
-            imageio.mimsave(DEMO_GIF_PATH, captured_frames, fps=30)
+            imageio.mimsave(DEMO_GIF_PATH, captured_frames, fps=30, loop=0)
             print(f"Saved demo GIF: {DEMO_GIF_PATH}")
         except Exception:
             print("Failed to save demo GIF (missing imageio).")
