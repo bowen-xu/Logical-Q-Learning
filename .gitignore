@@ -4,8 +4,8 @@
 .opencode
 idea/
 # recordings/episode_*.gif
-recordings/*.gif
-recordings/*.pkl
+# recordings/*.gif
+recordings/*/*.pkl
 
 # Byte-compiled / optimized / DLL files
 __pycache__/

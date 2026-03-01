@@ -8,6 +8,9 @@ import matplotlib.pyplot as plt
 from tqdm import tqdm
 from grid_world import GridWorld
 
+RECORDING_DIR = Path("recordings/gridworld_lql")
+REWARDS_PLOT_PATH = RECORDING_DIR / "rewards_plot.png"
+
 
 def run_episode(env: GridWorld, agent: Agent, max_steps: int = 20) -> float:
     """Run one episode, return total reward"""
@@ -99,11 +102,13 @@ def main():
         print("  " + " ".join(row))
 
     print("\nTest complete!")
+    RECORDING_DIR.mkdir(parents=True, exist_ok=True)
     plt.plot(rewards)
     plt.xlabel("Episode")
     plt.ylabel("Total Reward")
     plt.title("Total Reward per Episode")
-    plt.savefig("rewards_plot.png")
+    plt.savefig(REWARDS_PLOT_PATH)
+    print(f"Saved rewards plot: {REWARDS_PLOT_PATH}")
 
 
 if __name__ == "__main__":
