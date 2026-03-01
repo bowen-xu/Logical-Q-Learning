@@ -62,27 +62,35 @@ def main() -> None:
     }
 
     fig, ax = plt.subplots(figsize=(5, 3))
+    series: dict[str, tuple[np.ndarray, np.ndarray, range]] = {}
 
     for name, path in SOURCES.items():
         rewards = load_rewards(path)
         rewards_smooth = smooth(rewards, window=SMOOTH_WINDOW)
         x_smooth = range(len(rewards) - len(rewards_smooth), len(rewards))
+        series[name] = (rewards, rewards_smooth, x_smooth)
 
-        # Raw curve (light)
+    # Draw all raw curves first so they stay below the smoothed curves.
+    for name in SOURCES:
+        rewards, _, _ = series[name]
         ax.plot(
             rewards,
             color=colors[name],
             alpha=0.18,
             linewidth=0.8,
+            zorder=1,
         )
 
-        # Smoothed curve (main)
+    # Draw all smoothed curves last so they always appear on top.
+    for name in SOURCES:
+        _, rewards_smooth, x_smooth = series[name]
         ax.plot(
             x_smooth,
             rewards_smooth,
             color=colors[name],
             linewidth=2,
             label=f"{name} (MA{SMOOTH_WINDOW})",
+            zorder=3,
         )
 
     ax.set_xlabel("Episode", fontweight="normal")
