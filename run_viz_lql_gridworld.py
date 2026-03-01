@@ -35,6 +35,7 @@ seed = 20260228
 
 rewards_path = None
 
+RECORDING_DIR = Path("recordings/gridworld_lql")
 
 class GridWorldVisualizer:
     def __init__(self, env: GridWorld, agent: Agent, cell_size: int = 64):
@@ -705,21 +706,21 @@ def main():
     print("Training agent with GIF recording...")
     print("Recording at episode 0, 500, 1000, 1500, 2000, 2500, 3000")
     visualizer.run_training(
-        num_episodes=3000, delay=50, record_interval=500, output_dir="recordings"
+        num_episodes=3000, delay=50, record_interval=500, output_dir=RECORDING_DIR
     )
 
     # Record final result with epsilon=0
     print("\nRecording final result...")
     visualizer.record_final(
-        output_path="recordings/final.png", trajectory_path="recordings/trajectory.png"
+        output_path=str(RECORDING_DIR / "final.png"), trajectory_path=str(RECORDING_DIR / "trajectory.png")
     )
 
     # Plot rewards
     if rewards_path is not None:
-        plot_rewards(rewards_path, smooth_window=50)
+        plot_rewards(rewards_path, smooth_window=50, output_path=str(RECORDING_DIR / "rewards.png"))
 
     pygame.quit()
-    print("\nDone! All recordings saved to 'recordings/' directory")
+    print(f"\nDone! All recordings saved to '{RECORDING_DIR}' directory")
 
 
 if __name__ == "__main__":

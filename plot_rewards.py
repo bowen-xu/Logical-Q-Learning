@@ -5,7 +5,7 @@ import numpy as np
 from utils import smooth
 
 
-def plot_rewards(rewards_path, smooth_window=50):
+def plot_rewards(rewards_path, smooth_window=50, output_path="recordings/rewards.png"):
     rewards = pickle.load(open(rewards_path, "rb"))
     rewards_smooth = smooth(np.array(rewards), window=smooth_window)
 
@@ -56,10 +56,10 @@ def plot_rewards(rewards_path, smooth_window=50):
     # ax.set_title("Training Progress", fontweight="normal", pad=10)
 
     plt.tight_layout()
-    plt.savefig("recordings/rewards.png", bbox_inches="tight", pad_inches=0.1)
+    plt.savefig(output_path, bbox_inches="tight", pad_inches=0.1)
     plt.close()
 
-    print("Saved: recordings/rewards.png")
+    print(f"Saved: {output_path}")
 
 
 if __name__ == "__main__":
