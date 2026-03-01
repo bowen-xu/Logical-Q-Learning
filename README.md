@@ -8,6 +8,8 @@ Training and visualization outputs are saved to `recordings/` by default.
 
 ## 1. Environment Setup
 
+Python version: the experiment was conducted using Python version **3.14.2**, but other versions may also work.
+
 ```bash
 python -m venv .venv
 source .venv/bin/activate
