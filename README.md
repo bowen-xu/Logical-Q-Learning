@@ -100,13 +100,13 @@ GridWorld (LQL):
 **Final Policy**
 
 <p align="center">
-  <img src="recordings/gridworld_lql/final.png" alt="GridWorld LQL Final" style="width:100%; max-width:520px; height:auto;"/>
+  <img src="recordings/gridworld_lql/final.png" alt="GridWorld LQL Final" width="35%"/>
 </p>
 
 **Training Reward Curve**
 
 <p align="center">
-  <img src="recordings/gridworld_lql/rewards.png" alt="GridWorld LQL Rewards" style="width:100%; max-width:700px; height:auto;"/>
+  <img src="recordings/gridworld_lql/rewards.png" alt="GridWorld LQL Rewards" width="50%"/>
 </p>
 
 GridWorld (LQL) key training stages:
@@ -127,12 +127,12 @@ GridWorld (LQL) key training stages:
 CartPole comparison across all four methods:
 
 <p align="center">
-  <img src="recordings/cartpole_compare/rewards_compare.png" alt="CartPole Compare" style="width:100%; max-width:700px; height:auto;"/>
+  <img src="recordings/cartpole_compare/rewards_compare.png" alt="CartPole Compare" style="width:65%; max-width:700px; height:auto;"/>
 </p>
 
 CartPole demo examples:
 
-<table width="100%">
+<table width="100%" border="0">
   <tr>
     <td align="center"><b>QL Demo</b></td>
     <td align="center"><b>LQL Demo</b></td>
