@@ -1,5 +1,7 @@
 # Logical-Q-Learning
 
+Logical-Q-Learning (LQL) provides a reformulation of Q-Learning by reconstructing Q-learning with explicit logical representation.
+
 This repository includes two experiment groups:
 - `GridWorld` (`run_viz_ql_gridworld.py` / `run_viz_lql_gridworld.py`)
 - `CartPole` (`run_ql_cartpole.py` / `run_lql_cartpole.py` / `run_ql_cartpole2.py` / `run_lql_cartpole2.py`)
